@@ -17,6 +17,7 @@
 
 static const char *TAG = "CURRENT_METER";
 static float current_mA = 0.0;
+static float current_A = 0.0;
 
 esp_err_t init_i2c() {
     i2c_config_t conf = {
@@ -35,16 +36,16 @@ esp_err_t root_get_handler(httpd_req_t *req) {
     char html[256];
     snprintf(html, sizeof(html),
              "<!DOCTYPE html><html><head><title>Current Monitor</title></head><body>"
-             "<h2>Current: %.2f mA</h2><script>"
-             "setInterval(()=>fetch('/current').then(r=>r.text()).then(d=>document.querySelector('h2').innerText='Current: '+d+' mA'),500);"
-             "</script></body></html>", current_mA);
+             "<h2>Current: %.1f A</h2><script>"
+             "setInterval(()=>fetch('/current').then(r=>r.text()).then(d=>document.querySelector('h2').innerText='Current: '+d+' A'),1000);"
+             "</script></body></html>", current_mA/1000.0);
     httpd_resp_send(req, html, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
 
 esp_err_t current_get_handler(httpd_req_t *req) {
     char buffer[32];
-    snprintf(buffer, sizeof(buffer), "%.2f", current_mA);
+    snprintf(buffer, sizeof(buffer), "%.1f", current_mA/1000.0);
     httpd_resp_send(req, buffer, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
@@ -85,8 +86,9 @@ void wifi_init_softap() {
 void current_task(void *pvParameters) {
     while (1) {
         current_mA = ina226_read_current_mA(I2C_MASTER_NUM, 0x40);
-        ESP_LOGI(TAG, "Current: %.2f mA", current_mA);
-        vTaskDelay(pdMS_TO_TICKS(500));
+        current_A = current_mA/1000.0;
+        ESP_LOGI(TAG, "Current: %.1f A", current_A);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
